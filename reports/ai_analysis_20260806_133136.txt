@@ -1,0 +1,29 @@
+**Assessment:** These frames strongly indicate a **protocol/stack mismatch or malformed diagnostic negative response handling**, not random bus noise.
+
+`ID 0x7CD5513` is extended, `DLC=20` (CAN FD-sized payload), and all 4 payloads are almost identical:  
+`7F F7 FF ... ... <counter-like last byte>`
+
+`0x7F` is UDS Negative Response SID, but `0xF7` (requested SID) and especially `0xFF` (NRC) are abnormal/reserved in most implementations. The long zero padding with only the last byte changing suggests a software-generated frame template with a dynamic trailer byte (counter/check/debug marker), rather than valid diagnostic content.
+
+**1) Possible root causes**
+1. **UDS implementation bug** in server or gateway: invalid NRC (`0xFF`) or wrong requested SID echo (`0xF7`).
+2. **CAN FD vs Classical CAN interpretation issue**: tool/ECU mismatch on frame format or DLC-to-length mapping causing parser “Invalid Payload.”
+3. **Gateway/security filter corruption**: diagnostic response rewritten/truncated, leaving header + padded zeros.
+4. **Byte-order/packing bug** in application layer (struct packing, uninitialized fields, wrong payload builder).
+5. **Fuzzing/invalid tester traffic** hitting unsupported service path and returning non-compliant negative responses.
+6. **DBC/decoder misconfiguration** in analysis tool (less likely here, because bytes themselves already look non-compliant for UDS NRC).
+
+**2) Recommended tests**
+1. **Capture raw CAN FD traffic** with a second tool (independent logger) to rule out decode-tool artifact.
+2. **Correlate request/response pairs** around each abnormal frame: identify actual request SID and confirm whether `0xF7` is ever valid in your stack.
+3. **ISO-TP/UDS conformance check** on this ECU/gateway path (negative response NRC range validation, padding rules, PCI correctness).
+4. **A/B test Classical CAN vs CAN FD mode** and verify DLC handling in ECU, gateway, and logger configuration.
+5. **Replay test**: inject the same triggering request sequence and confirm deterministic reproduction.
+6. **Firmware instrumentation**: log payload construction before CAN driver transmit; verify last-byte mutation source.
+7. **Gateway bypass test** (direct ECU connection) to isolate whether corruption is at ECU app, transport stack, or gateway.
+
+**3) Severity**
+**Medium-High** for validation, potentially **High** for diagnostics reliability:  
+- If this is on a production diagnostic path, it can break service tools, flashing workflows, and fault handling.  
+- If confined to non-production/debug service or fuzz campaign, severity drops to **Medium**.  
+- Raise to **High/Critical** if it appears during safety-relevant diagnostic sessions or blocks mandatory OBD/UDS behavior.

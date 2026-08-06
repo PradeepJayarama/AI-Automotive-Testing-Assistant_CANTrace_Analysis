@@ -1,0 +1,23 @@
+**Assessment:** These 4 frames strongly suggest a **malformed diagnostic negative response on CAN FD** (or parser mismatch), not random bus noise.
+
+1. **Possible root causes**
+1. **Protocol/decoder mismatch:** ID is marked extended and DLC=20 (CAN FD), but payload pattern `7F F7 FF ...` looks like a UDS-style negative response header with unusual service/NRC values (`F7`, `FF`) and excessive zero padding.
+2. **Application bug in ECU diagnostic stack:** Wrong SID/NRC encoding, uninitialized fields, or faulty buffer construction (only last byte changes: `37/0A/19/28`), indicating a likely software formatting defect.
+3. **Gateway/translation corruption:** If traffic crosses domains (e.g., DoIP/CAN gateway), a mapping or endian/offset bug could produce invalid diagnostic payloads.
+4. **Tooling or DBC rule issue:** If “Invalid Payload” comes from a validator, expected signal length/layout may not match actual FD frame definition.
+5. **Security/fuzzing activity:** Repeated malformed diagnostics with same ID may come from robustness/fuzz testing or unauthorized injection.
+
+2. **Recommended tests**
+1. **Capture context around each frame** (±2 s): preceding request frame, ECU response timing, bus load, error counters, and whether any gateway path is involved.
+2. **Reproduce with known-good tester** (same DID/service/session): compare expected UDS negative response format vs observed bytes.
+3. **Check CAN FD config consistency** across nodes/tools: bit rate switching, DLC interpretation, extended-ID filtering, and parser settings.
+4. **ECU software instrumentation:** log diagnostic handler entry/exit, SID/NRC assignment, buffer length, and padding logic.
+5. **A/B path isolation:** test direct ECU bus vs through gateway to localize corruption point.
+6. **Security check:** verify sender authenticity for ID `0x7CD5513` and run intrusion-rule correlation for repeated malformed diagnostic traffic.
+
+3. **Severity**
+**Medium to High (context-dependent).**  
+- **High** if this frame can block diagnostics, affect safety-related maintenance functions, or indicates spoofing/injection potential.  
+- **Medium** if limited to non-safety diagnostics with no functional impact beyond validation failures.  
+
+Given repetition and structured malformed content, treat as **High priority for investigation** until source is confirmed.
