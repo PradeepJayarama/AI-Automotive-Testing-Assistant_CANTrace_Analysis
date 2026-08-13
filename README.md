@@ -230,10 +230,6 @@ If you’d like to add:
 
 please open an issue or pull request.
 
-📜 License
-
-This project is released under the MIT License.
-
 👨‍💻 Author
 
 Pradeep Jayarama
@@ -241,10 +237,6 @@ email:itzmepradeep238@gmail.com
 
 Automotive Testing & Validation Engineer
 CAN / UDS / ECU Integration
-
-AI-assisted Automotive Test Automation
-
-GitHub: https://github.com/your-username
 
 ⭐ Why This Project Matters
 
